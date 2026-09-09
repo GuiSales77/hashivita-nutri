@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
+import { AUTH_CALLBACK_URL } from '../services/authRedirect';
 
 export type AppUser = {
   id: string;
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName }, emailRedirectTo: AUTH_CALLBACK_URL },
     });
     if (error) return { ok: false, error: error.message };
     // Se "Confirm email" estiver ativado no Supabase, data.session vem null aqui —
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
-    await supabase.auth.resend({ type: 'signup', email });
+    await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: AUTH_CALLBACK_URL } });
   }, []);
 
   const logout = useCallback(async () => {
