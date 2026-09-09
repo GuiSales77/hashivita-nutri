@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HashiVita Nutri</title>
+  <style>
+    body{font-family:-apple-system,Inter,sans-serif;background:#F8FBF9;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;text-align:center;}
+  .card{background:#FFFFFF;border-radius:20px;padding:32px;max-width:360px;box-shadow:0 10px 30px rgba(27,67,50,0.1);}
+      h1{color:#1B4332;font-size:20px;margin:0 0 8px;}
+  p{color:#5B6E64;font-size:14px;line-height:1.5;}
+  a.btn{display:inline-block;margin-top:16px;background:#2D6A4F;color:white;text-decoration:none;padding:14px 24px;border-radius:14px;font-weight:600;font-size:15px;}
+</style>
+  </head>
+  <body>
+    <div class="card">
+      <div style="font-size:36px;">🌱</div>
+      <h1>Confirmando seu e-mail...</h1>
+      <p>Se o app não abrir sozinho em alguns segundos, toque no botão abaixo.</p>
+    <a class="btn" id="openApp" href="#">Abrir o HashiVita Nutri</a>
+    </div>
+    <script>
+      // Supabase pode devolver o resultado tanto na query string (?code=...)
+      // quanto no fragmento (#access_token=...&refresh_token=...) dependendo
+      // do fluxo (PKCE vs implicit). Repassamos os dois para o app, intactos.
+      var query = window.location.search || '';
+    var hash = window.location.hash || '';
+    var target = 'hashivitanutri://auth-callback' + query + hash;
+
+    document.getElementById('openApp').setAttribute('href', target);
+
+    // Tenta abrir o app automaticamente.
+    window.location.replace(target);
+  </script>
+</body>
+    </html>
+    
