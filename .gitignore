@@ -42,3 +42,7 @@ yarn-error.*
 
 # credenciais locais do Supabase (nao versionar)
 .env
+
+# artefatos de build
+*.apk
+*.aab

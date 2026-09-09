@@ -1,0 +1,85 @@
+name: Build APK e publicar Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Necessário para o passo de Release criar a tag e anexar o APK.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Instalar EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Conferir se o projeto está linkado ao EAS
+        # Sem extra.eas.projectId no app.json o `eas build --non-interactive`
+        # falha, mas só depois de subir o projeto. Falhar aqui economiza tempo
+        # e dá uma mensagem que diz o que fazer.
+        run: |
+          if ! node -e "process.exit(require('./app.json').expo?.extra?.eas?.projectId ? 0 : 1)"; then
+            echo "::error::app.json não tem extra.eas.projectId. Rode 'eas init' localmente e commite o app.json."
+            exit 1
+          fi
+
+      - name: Criar .env a partir dos secrets
+        run: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}" >> .env
+
+      - name: Permitir que o EAS envie o .env
+        # O EAS respeita o .gitignore ao empacotar o projeto — e o .env está
+        # ignorado. Sem isso o .env criado acima NÃO sobe, as variáveis ficam
+        # undefined no bundle e o app instala mas não fala com o Supabase.
+        # Quando existe .easignore, ele substitui o .gitignore nessa decisão.
+        run: grep -v '^\.env$' .gitignore > .easignore
+
+      - name: Type-check antes de buildar
+        # Se o código tiver erro de tipo, o build nem começa — não gasta cota
+        # de build da Expo com código quebrado.
+        run: npx tsc --noEmit
+
+      - name: Build do APK na nuvem da Expo
+        id: build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build --profile preview --platform android --non-interactive --wait --json > build.json
+          URL=$(jq -r '.[0].artifacts.applicationArchiveUrl // .[0].artifacts.buildUrl // empty' build.json)
+          if [ -z "$URL" ]; then
+            echo "::error::O build terminou sem URL de artefato."
+            cat build.json
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Baixar o APK gerado
+        run: curl -fL --retry 3 -o hashivita-nutri.apk "${{ steps.build.outputs.url }}"
+
+      - name: Publicar como GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "HashiVita Nutri — build ${{ github.run_number }}"
+          files: ./hashivita-nutri.apk
+          body: |
+            Build automático gerado a partir do commit ${{ github.sha }}.
+
+            Baixe o `.apk` abaixo e instale no Android (ative "instalar de
+            fontes desconhecidas" se o sistema pedir).
