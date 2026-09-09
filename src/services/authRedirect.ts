@@ -1,16 +1,16 @@
-import * as Linking from 'expo-linking';
-
 /**
  * URL para onde o Supabase manda o usuário depois que ele clica no link de
  * confirmação de e-mail.
  *
- * Sem passar isso no signUp, o Supabase usa o "Site URL" configurado no painel —
- * que por padrão é http://localhost:3000. O usuário confirmaria o e-mail e cairia
- * numa página quebrada, sem caminho de volta pro app.
+ * É uma página HTTPS intermediária (docs/auth-callback.html, servida pelo GitHub
+ * Pages), e não o scheme do app direto. Motivo: um link `hashivitanutri://` não
+ * abre nada quando o e-mail é aberto no navegador do desktop — o usuário via só
+ * uma aba em branco. A página HTTPS abre em qualquer lugar, repassa a query e o
+ * fragmento intactos para `hashivitanutri://auth-callback` e ainda oferece um
+ * botão manual se o app não abrir sozinho.
  *
- * `createURL` resolve para o scheme do app (`hashivitanutri://auth-callback`) num
- * build real, e para `exp://.../--/auth-callback` dentro do Expo Go. Os DOIS
- * precisam estar na allow-list de Redirect URLs do painel do Supabase, senão o
- * link volta pro Site URL em vez de abrir o app.
+ * ⚠️ Esta URL precisa estar na allow-list de Redirect URLs do painel do Supabase.
+ * Se não estiver, o Supabase ignora silenciosamente e usa o Site URL no lugar —
+ * sem erro nenhum, o link só leva para o lugar errado.
  */
-export const AUTH_CALLBACK_URL = Linking.createURL('/auth-callback');
+export const AUTH_CALLBACK_URL = 'https://guisales77.github.io/hashivita-nutri/auth-callback.html';
