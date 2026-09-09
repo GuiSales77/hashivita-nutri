@@ -18,10 +18,20 @@ export type Food = {
   default_grams: number | null;
 };
 
+/**
+ * Neutraliza os curingas do LIKE. Sem isso, digitar "100%" ou "a_b" na busca
+ * casa com qualquer coisa: `%` significa "qualquer sequência" e `_` "qualquer
+ * caractere". Não é injeção de SQL (o PostgREST parametriza o valor), é
+ * resultado errado. A barra invertida é o escape padrão do Postgres.
+ */
+function escaparCuringasLike(termo: string): string {
+  return termo.replace(/[\\%_]/g, (caractere) => '\\' + caractere);
+}
+
 export async function searchFoods(query: string): Promise<Food[]> {
   let request = supabase.from('food').select('*').order('name', { ascending: true }).limit(20);
   if (query.trim()) {
-    request = request.ilike('name', `%${query.trim()}%`);
+    request = request.ilike('name', `%${escaparCuringasLike(query.trim())}%`);
   }
   const { data, error } = await request;
   if (error) {

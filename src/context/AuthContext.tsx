@@ -25,6 +25,7 @@ type AuthContextValue = {
   session: Session | null;
   appUser: AppUser | null;
   loading: boolean;
+  profileLoaded: boolean;
   signup: (data: { fullName: string; email: string; password: string }) => Promise<SignupResult>;
   login: (email: string, password: string) => Promise<LoginResult>;
   resendConfirmationEmail: (email: string) => Promise<void>;
@@ -40,11 +41,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  // Distingue "perfil ainda não chegou" de "perfil chegou e não existe". Sem
+  // isso o app/index.tsx decidia a rota com appUser=null e mandava pro
+  // onboarding quem já tinha se cadastrado.
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const loadAppUser = useCallback(async (userId: string) => {
     const { data, error } = await supabase.from('app_user').select('*').eq('id', userId).maybeSingle();
     if (error || !data) {
       setAppUser(null);
+      setProfileLoaded(true);
       return;
     }
     setAppUser({
@@ -61,21 +67,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onboarded: data.onboarded,
       avatarUrl: data.avatar_url ?? null,
     });
+    setProfileLoaded(true);
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    // O await aqui é o ponto: sem ele, `loading` virava false com o perfil ainda
+    // nulo e a primeira rota era decidida com dado pela metade.
+    supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session);
-      if (data.session) loadAppUser(data.session.user.id);
+      if (data.session) {
+        await loadAppUser(data.session.user.id);
+      } else {
+        setProfileLoaded(true);
+      }
       setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession) {
+        setProfileLoaded(false);
         loadAppUser(newSession.user.id);
       } else {
         setAppUser(null);
+        setProfileLoaded(true);
       }
     });
 
@@ -155,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, appUser, loading, signup, login, resendConfirmationEmail, logout, completeOnboarding, updateHealthInfo, refreshAppUser }}
+      value={{ session, appUser, loading, profileLoaded, signup, login, resendConfirmationEmail, logout, completeOnboarding, updateHealthInfo, refreshAppUser }}
     >
       {children}
     </AuthContext.Provider>

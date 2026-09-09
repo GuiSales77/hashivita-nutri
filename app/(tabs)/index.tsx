@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, NUTRIENTES_PRIORITARIOS, METAS_PADRAO, LIMITES_SUPERIORES, META_SODIO_HIPERTENSAO_MG } from '../../src/theme/theme';
@@ -34,7 +34,13 @@ export default function HomeScreen() {
   const temDiabetes = appUser?.healthConditions.some((c) => c.startsWith('diabetes'));
 
   async function handleRemove(id: string) {
-    await deleteMealLog(id);
+    try {
+      await deleteMealLog(id);
+    } catch (e: any) {
+      // Sem isso o item some da lista e reaparece no reload, sem explicação.
+      Alert.alert('Não foi possível remover', e?.message ?? 'Verifique sua conexão e tente de novo.');
+      return;
+    }
     reload();
   }
 

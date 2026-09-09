@@ -81,7 +81,8 @@ export async function listTodayMealLogs(userId: string): Promise<MealLog[]> {
 }
 
 export async function deleteMealLog(id: string): Promise<void> {
-  await supabase.from('meal_log').delete().eq('id', id);
+  const { error } = await supabase.from('meal_log').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export function totalDiarioPorNutriente(entries: MealLog[], nutriente: string): number {
