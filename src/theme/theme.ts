@@ -44,6 +44,28 @@ export const LIMITES_SUPERIORES = {
 
 export const META_SODIO_HIPERTENSAO_MG = 2000;
 
+export type MealType = 'cafe_da_manha' | 'almoco' | 'lanche' | 'jantar' | 'ceia';
+
+// A ordem aqui é a ordem cronológica natural do dia, e é ela que a Home usa
+// para montar os grupos — não a ordem em que o usuário registrou.
+export const TIPOS_REFEICAO: { key: MealType; label: string; emoji: string }[] = [
+  { key: 'cafe_da_manha', label: 'Café da manhã', emoji: '🌅' },
+  { key: 'almoco', label: 'Almoço', emoji: '🍽️' },
+  { key: 'lanche', label: 'Lanche', emoji: '🥪' },
+  { key: 'jantar', label: 'Jantar', emoji: '🌙' },
+  { key: 'ceia', label: 'Ceia', emoji: '🌜' },
+];
+
+/** Pré-seleciona o tipo pelo horário, para o caso comum ser só confirmar. */
+export function sugerirTipoRefeicao(agora: Date = new Date()): MealType {
+  const hora = agora.getHours();
+  if (hora < 10) return 'cafe_da_manha';
+  if (hora < 14) return 'almoco';
+  if (hora < 18) return 'lanche';
+  if (hora < 22) return 'jantar';
+  return 'ceia';
+}
+
 export type NutrienteKey = 'selenium_mcg' | 'iodine_mcg' | 'vitamin_d_mcg' | 'zinc_mg' | 'iron_mg';
 
 export const NUTRIENTES_PRIORITARIOS: { key: NutrienteKey; label: string; unidade: string }[] = [

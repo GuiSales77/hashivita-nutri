@@ -29,6 +29,8 @@ type AuthContextValue = {
   signup: (data: { fullName: string; email: string; password: string }) => Promise<SignupResult>;
   login: (email: string, password: string) => Promise<LoginResult>;
   resendConfirmationEmail: (email: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (novaSenha: string) => Promise<void>;
   logout: () => Promise<void>;
   completeOnboarding: (data: Partial<AppUser>) => Promise<void>;
   updateHealthInfo: (data: Partial<AppUser>) => Promise<void>;
@@ -124,6 +126,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: AUTH_CALLBACK_URL } });
   }, []);
 
+  // Não distingue e-mail existente de inexistente: revelar isso deixaria
+  // qualquer um descobrir quais e-mails têm conta. O Supabase já responde
+  // igual nos dois casos; aqui só garantimos que a UI também responda igual.
+  const sendPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: AUTH_CALLBACK_URL,
+    });
+    // Limite de envio é a única falha que vale mostrar — o usuário precisa
+    // saber que deve esperar, senão fica tentando de novo achando que quebrou.
+    if (error && /rate|limit|seconds/i.test(error.message)) throw new Error(error.message);
+  }, []);
+
+  const updatePassword = useCallback(async (novaSenha: string) => {
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+    if (error) throw new Error(error.message);
+  }, []);
+
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -170,7 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, appUser, loading, profileLoaded, signup, login, resendConfirmationEmail, logout, completeOnboarding, updateHealthInfo, refreshAppUser }}
+      value={{ session, appUser, loading, profileLoaded, signup, login, resendConfirmationEmail, logout, sendPasswordReset, updatePassword, completeOnboarding, updateHealthInfo, refreshAppUser }}
     >
       {children}
     </AuthContext.Provider>

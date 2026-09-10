@@ -55,29 +55,48 @@ export default function AuthCallbackScreen() {
         return;
       }
 
+      // O Supabase marca o motivo do link em `type`: 'signup' (confirmação de
+      // cadastro) ou 'recovery' (troca de senha). Sem essa distinção, quem
+      // clicasse no link de recuperação cairia direto na Home, logado, e nunca
+      // veria a tela de definir a senha nova.
+      const ehRecuperacao = params.type === 'recovery';
+      let temSessao = false;
+
       try {
         if (params.code) {
           const { error } = await supabase.auth.exchangeCodeForSession(params.code);
           if (error) throw error;
+          temSessao = true;
         } else if (params.access_token && params.refresh_token) {
           const { error } = await supabase.auth.setSession({
             access_token: params.access_token,
             refresh_token: params.refresh_token,
           });
           if (error) throw error;
-        } else {
-          // Confirmação feita no navegador sem devolver sessão: o e-mail está
-          // validado, só falta entrar. É o caminho mais comum.
-          if (!cancelado) router.replace('/(auth)/login');
-          return;
+          temSessao = true;
         }
       } catch (e: any) {
         if (!cancelado) setErro(e?.message ?? 'Não foi possível concluir a confirmação.');
         return;
       }
 
-      // Com sessão criada, app/index.tsx decide entre onboarding e abas.
-      if (!cancelado) router.replace('/');
+      if (cancelado) return;
+
+      if (ehRecuperacao) {
+        if (!temSessao) {
+          // Recuperação sem sessão não dá para concluir: o updateUser
+          // precisaria de alguém autenticado para aplicar a senha.
+          setErro('O link de recuperação expirou ou já foi usado. Peça um novo.');
+          return;
+        }
+        router.replace('/(auth)/reset-password');
+        return;
+      }
+
+      // Confirmação de cadastro: com sessão, o app/index.tsx decide entre
+      // onboarding e abas. Sem sessão, o e-mail foi validado no navegador e só
+      // falta entrar — é o caminho mais comum.
+      router.replace(temSessao ? '/' : '/(auth)/login');
     })();
 
     return () => {

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, NUTRIENTES_PRIORITARIOS, METAS_PADRAO, LIMITES_SUPERIORES, META_SODIO_HIPERTENSAO_MG } from '../../src/theme/theme';
 import { Card, NutrientBar, SectionLabel } from '../../src/components/ui';
 import { useAuth } from '../../src/context/AuthContext';
-import { listTodayMealLogs, totalDiarioPorNutriente, deleteMealLog, MealLog } from '../../src/db/repositories/mealRepositorySupabase';
+import { listTodayMealLogs, totalDiarioPorNutriente, deleteMealLog, agruparPorTipoDeRefeicao, MealLog } from '../../src/db/repositories/mealRepositorySupabase';
 
 export default function HomeScreen() {
   const { appUser, session } = useAuth();
@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [entries, setEntries] = useState<MealLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removendoId, setRemovendoId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!session) return;
@@ -32,14 +33,26 @@ export default function HomeScreen() {
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const temPressaoAlta = appUser?.healthConditions.includes('pressao_alta');
   const temDiabetes = appUser?.healthConditions.some((c) => c.startsWith('diabetes'));
+  const grupos = agruparPorTipoDeRefeicao(entries);
 
-  async function handleRemove(id: string) {
+  // Confirmação sempre: os cartões ficam próximos e a exclusão não tem volta.
+  function handleRemove(entry: MealLog) {
+    Alert.alert('Remover alimento', `Remover ${entry.foodName} do registro de hoje?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: () => removerConfirmado(entry.id) },
+    ]);
+  }
+
+  async function removerConfirmado(id: string) {
+    setRemovendoId(id);
     try {
       await deleteMealLog(id);
     } catch (e: any) {
       // Sem isso o item some da lista e reaparece no reload, sem explicação.
       Alert.alert('Não foi possível remover', e?.message ?? 'Verifique sua conexão e tente de novo.');
       return;
+    } finally {
+      setRemovendoId(null);
     }
     reload();
   }
@@ -103,24 +116,44 @@ export default function HomeScreen() {
           <Text style={{ color: colors.ink500, fontSize: 13 }}>Nenhum alimento registrado ainda hoje.</Text>
         </Card>
       )}
-      {entries.map((entry) => (
-        <Pressable key={entry.id} onLongPress={() => handleRemove(entry.id)}>
-          <Card>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.ink700 }}>
-                  {entry.foodEmoji ? `${entry.foodEmoji} ` : ''}{entry.foodName}
-                </Text>
-                <Text style={{ fontSize: 11.5, color: colors.ink500 }}>
-                  {entry.quantity ? `${entry.quantity} ${entry.unit ?? ''}` : `${entry.grams}g`}
-                </Text>
+      {grupos.map((grupo) => (
+        <View key={grupo.key}>
+          <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.green900, marginTop: spacing.md, marginBottom: spacing.xs }}>
+            {grupo.emoji} {grupo.label}
+          </Text>
+          {grupo.itens.map((entry) => (
+            <Card key={entry.id}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.ink700 }}>
+                    {entry.foodEmoji ? `${entry.foodEmoji} ` : ''}{entry.foodName}
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: colors.ink500 }}>
+                    {entry.quantity ? `${entry.quantity} ${entry.unit ?? ''}` : `${entry.grams}g`}
+                    {'  ·  '}
+                    {new Date(entry.loggedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+
+                {/* Lixeira visível. Antes a exclusão era um toque longo sem
+                    nenhuma indicação de que existia. */}
+                <Pressable
+                  onPress={() => handleRemove(entry)}
+                  disabled={removendoId === entry.id}
+                  hitSlop={12}
+                  accessibilityLabel={`Remover ${entry.foodName}`}
+                  style={{ paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }}
+                >
+                  {removendoId === entry.id ? (
+                    <ActivityIndicator color={colors.ink500} size="small" />
+                  ) : (
+                    <Text style={{ fontSize: 16 }}>🗑️</Text>
+                  )}
+                </Pressable>
               </View>
-              <Text style={{ fontSize: 11.5, color: colors.ink500 }}>
-                {new Date(entry.loggedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          </Card>
-        </Pressable>
+            </Card>
+          ))}
+        </View>
       ))}
 
       <Pressable

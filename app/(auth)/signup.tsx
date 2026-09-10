@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing } from '../../src/theme/theme';
 import { PrimaryButton, LabeledInput, TextButton } from '../../src/components/ui';
 import { useAuth } from '../../src/context/AuthContext';
+import { validarSenha } from '../../src/services/passwordPolicy';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -21,12 +22,9 @@ export default function SignupScreen() {
       Alert.alert('Digite seu nome', 'Precisamos saber como te chamar.');
       return;
     }
-    if (senha.length < 8) {
-      Alert.alert('Senha fraca', 'Use pelo menos 8 caracteres.');
-      return;
-    }
-    if (senha !== confirmar) {
-      Alert.alert('As senhas não coincidem', 'Confira e tente novamente.');
+    const politica = validarSenha(senha, confirmar);
+    if (!politica.ok) {
+      Alert.alert(politica.titulo, politica.mensagem);
       return;
     }
     setLoading(true);

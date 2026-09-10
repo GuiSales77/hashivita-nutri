@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "hashivitanutri",
-    "backgroundColor": "#F8FBF9",
+    "backgroundColor": "#1B4332",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.nexvio.hashivitanutri"
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.nexvio.hashivitanutri",
       "adaptiveIcon": {
-        "backgroundColor": "#D8F3DC",
+        "backgroundColor": "#1B4332",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -25,7 +25,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1B4332"
+        }
+      ]
     ],
     "extra": {
       "router": {},

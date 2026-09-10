@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, NUTRIENTES_PRIORITARIOS } from '../src/theme/theme';
+import { colors, spacing, NUTRIENTES_PRIORITARIOS, TIPOS_REFEICAO, sugerirTipoRefeicao, MealType } from '../src/theme/theme';
 import { Card, PrimaryButton, SectionLabel, Chip } from '../src/components/ui';
 import { searchFoods, Food } from '../src/db/repositories/foodRepositorySupabase';
 import { createMealLog, calcularNutrientesDoAlimento } from '../src/db/repositories/mealRepositorySupabase';
@@ -19,6 +19,8 @@ export default function AddFoodScreen() {
   const [useGramsExact, setUseGramsExact] = useState(false);
   const [gramsInput, setGramsInput] = useState('100');
   const [quantityMultiplier, setQuantityMultiplier] = useState(1);
+  // Pré-selecionado pelo horário: no caso comum o usuário só confirma.
+  const [mealType, setMealType] = useState<MealType>(() => sugerirTipoRefeicao());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -49,7 +51,8 @@ export default function AddFoodScreen() {
         selectedFood,
         useGramsExact ? undefined : quantityMultiplier,
         useGramsExact ? `${quantidadeGramas}g` : selectedFood.default_unit ?? undefined,
-        quantidadeGramas
+        quantidadeGramas,
+        mealType
       );
       router.back();
     } catch (e: any) {
@@ -92,6 +95,22 @@ export default function AddFoodScreen() {
               Selênio {selectedFood.selenium_mcg ?? 0}mcg · Ferro {selectedFood.iron_mg ?? 0}mg — por 100g
             </Text>
           </Card>
+
+          {/* Depois de escolher o alimento, e não antes: a pergunta que o
+              usuário tem na cabeça ao abrir a tela é "o que eu comi", não
+              "em que refeição". Perguntar o tipo primeiro cria uma etapa
+              entre ele e a ação principal, que é a busca. */}
+          <SectionLabel>Refeição</SectionLabel>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {TIPOS_REFEICAO.map((tipo) => (
+              <Chip
+                key={tipo.key}
+                label={`${tipo.emoji} ${tipo.label}`}
+                active={mealType === tipo.key}
+                onPress={() => setMealType(tipo.key)}
+              />
+            ))}
+          </View>
 
           <SectionLabel>Quantidade</SectionLabel>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>

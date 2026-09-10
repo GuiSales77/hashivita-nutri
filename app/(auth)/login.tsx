@@ -55,7 +55,10 @@ export default function LoginScreen() {
       <LabeledInput label="SENHA" value={senha} onChangeText={setSenha} placeholder="••••••••" secure />
 
       <PrimaryButton title="Entrar" onPress={handleLogin} loading={loading} style={{ marginTop: 8 }} />
-      <View style={{ marginTop: 16 }}>
+      <View style={{ marginTop: 14 }}>
+        <TextButton title="Esqueci minha senha" onPress={() => router.push('/(auth)/forgot-password')} />
+      </View>
+      <View style={{ marginTop: 14 }}>
         <TextButton title="Não tem conta? Criar agora" onPress={() => router.push('/(auth)/signup')} />
       </View>
     </KeyboardAvoidingView>
