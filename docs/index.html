@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HashiVita Nutri</title>
+  <meta name="description" content="App de nutricao para Hashimoto">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+  :root{--green-900:#1B4332;--green-700:#2D6A4F;--green-100:#D8F3DC;--paper:#F8FBF9;--white:#FFFFFF;--ink-700:#22302A;--ink-500:#5B6E64;--amber-bg:#FBF0DB;--amber-text:#6B4E14;--border:#E3EFE7;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,Inter,sans-serif;background:var(--paper);color:var(--ink-700);}
+.hero{background:linear-gradient(160deg,var(--green-900),var(--green-700));color:white;padding:56px 24px 72px;text-align:center;}
+.hero .emoji{font-size:48px;}
+.hero h1{font-size:28px;margin-top:8px;}
+.hero p{font-size:15px;opacity:0.9;max-width:420px;margin:10px auto 0;line-height:1.5;}
+.container{max-width:480px;margin:-40px auto 0;padding:0 20px 60px;}
+.card{background:var(--white);border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(27,67,50,0.12);margin-bottom:16px;}
+.btn-download{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--green-700);color:white;text-decoration:none;font-weight:700;font-size:16px;padding:18px;border-radius:16px;text-align:center;}
+.btn-sub{text-align:center;font-size:12px;color:var(--ink-500);margin-top:10px;}
+.features{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;}
+.feature{background:var(--green-100);border-radius:14px;padding:14px;}
+.feature .icon{font-size:20px;}
+.feature .title{font-weight:700;font-size:13px;color:var(--green-900);margin-top:6px;}
+.feature .desc{font-size:11.5px;color:var(--ink-500);margin-top:2px;line-height:1.4;}
+.qr-section{text-align:center;}
+.qr-section h2{font-size:15px;margin-bottom:4px;}
+.qr-section p{font-size:12.5px;color:var(--ink-500);margin-bottom:16px;}
+#qrcode{display:flex;justify-content:center;margin-bottom:8px;}
+.note{background:var(--amber-bg);color:var(--amber-text);font-size:12px;border-radius:14px;padding:14px 16px;line-height:1.6;}
+.note b{display:block;margin-bottom:4px;}
+footer{text-align:center;font-size:11.5px;color:var(--ink-500);padding:24px;}
+.steps{margin-top:12px;}
+  .step{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;}
+.step-num{background:var(--green-700);color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.step-text{font-size:13px;color:var(--ink-700);line-height:1.5;padding-top:1px;}
+</style>
+  </head>
+  <body>
+  <div class="hero">
+  <div class="emoji">🌱</div>
+  <h1>HashiVita Nutri</h1>
+  <p>Registro alimentar com feedback nutricional para quem convive com tireoidite de Hashimoto — selenio, iodo, vitamina D, zinco e ferro, calculados a partir da Tabela TACO.</p>
+</div>
+
+<div class="container">
+
+<div class="card">
+<a class="btn-download" href="https://github.com/GuiSales77/hashivita-nutri/releases/latest/download/hashivita-nutri.apk">
+⬇️ Baixar para Android
+</a>
+  <div class="btn-sub">Gratuito · Versao mais recente sempre neste link</div>
+
+<div class="features">
+<div class="feature">
+  <div class="icon">🍽️</div>
+<div class="title">175+ alimentos</div>
+<div class="desc">Base ampliada, calculada por regra de tres sobre a TACO</div>
+</div>
+<div class="feature">
+<div class="icon">📊</div>
+<div class="title">Metas nutricionais</div>
+<div class="desc">Selenio, iodo, vitamina D, zinco e ferro no seu dia</div>
+  </div>
+  <div class="feature">
+<div class="icon">🍳</div>
+  <div class="title">Por refeicao</div>
+  <div class="desc">Cafe, almoco, lanche, jantar e ceia organizados</div>
+  </div>
+<div class="feature">
+<div class="icon">🔐</div>
+  <div class="title">Seus dados, seus</div>
+<div class="desc">Login com e-mail, dados salvos com seguranca</div>
+</div>
+</div>
+  </div>
+<div class="card qr-section">
+  <h2>Prefere escanear?</h2>
+  <p>Aponte a camera do celular Android para este QR code</p>
+<div id="qrcode"></div>
+</div>
+
+<div class="card">
+<h2 style="font-size:15px;margin-bottom:4px;">Como instalar</h2>
+  <div class="steps">
+  <div class="step"><div class="step-num">1</div><div class="step-text">Toque em "Baixar para Android" ou escaneie o QR code acima</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-text">Quando o download terminar, abra o arquivo hashivita-nutri.apk</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">O Android vai pedir permissao para "instalar de fontes desconhecidas" — isso e normal, pode permitir</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Toque em Instalar e pronto</div></div>
+</div>
+</div>
+
+<div class="note">
+<b>⚠️ Antes de usar</b>
+  Este app e uma ferramenta de apoio educativo e nao substitui acompanhamento medico ou nutricional. Disponivel apenas para Android no momento.
+  </div>
+
+  </div>
+
+  <footer>HashiVita Nutri</footer>
+
+  <script>
+  new QRCode(document.getElementById("qrcode"), {
+  text: "https://github.com/GuiSales77/hashivita-nutri/releases/latest/download/hashivita-nutri.apk",
+  width: 180,
+  height: 180,
+  colorDark: "#1B4332",
+  colorLight: "#ffffff"
+  });
+</script>
+
+  </body>
+  </html>
+  
