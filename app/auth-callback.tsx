@@ -55,11 +55,9 @@ export default function AuthCallbackScreen() {
         return;
       }
 
-      // O Supabase marca o motivo do link em `type`: 'signup' (confirmação de
-      // cadastro) ou 'recovery' (troca de senha). Sem essa distinção, quem
-      // clicasse no link de recuperação cairia direto na Home, logado, e nunca
-      // veria a tela de definir a senha nova.
-      const ehRecuperacao = params.type === 'recovery';
+      // Esta rota atende só a confirmação de cadastro. A recuperação de senha
+      // não usa link: é por código digitado em (auth)/reset-password, porque
+      // scanners de e-mail pré-visitavam o link e consumiam o token.
       let temSessao = false;
 
       try {
@@ -81,17 +79,6 @@ export default function AuthCallbackScreen() {
       }
 
       if (cancelado) return;
-
-      if (ehRecuperacao) {
-        if (!temSessao) {
-          // Recuperação sem sessão não dá para concluir: o updateUser
-          // precisaria de alguém autenticado para aplicar a senha.
-          setErro('O link de recuperação expirou ou já foi usado. Peça um novo.');
-          return;
-        }
-        router.replace('/(auth)/reset-password');
-        return;
-      }
 
       // Confirmação de cadastro: com sessão, o app/index.tsx decide entre
       // onboarding e abas. Sem sessão, o e-mail foi validado no navegador e só
