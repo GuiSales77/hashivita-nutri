@@ -1,7 +1,7 @@
 /**
  * URL para onde o Supabase manda o usuário depois que ele clica no link de
- * confirmação de e-mail de CADASTRO. (A recuperação de senha não usa link:
- * é por código de 6 dígitos — ver sendPasswordReset no AuthContext.)
+ * confirmação de cadastro OU no link de recuperação de senha. O
+ * app/auth-callback.tsx diferencia os dois pelo parâmetro `type`.
  *
  * É uma página HTTPS intermediária (docs/auth-callback.html, servida pelo GitHub
  * Pages), e não o scheme do app direto. Motivo: um link `hashivitanutri://` não

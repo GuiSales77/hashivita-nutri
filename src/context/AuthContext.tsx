@@ -31,7 +31,6 @@ type AuthContextValue = {
   resendConfirmationEmail: (email: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (novaSenha: string) => Promise<void>;
-  verifyRecoveryCode: (email: string, codigo: string) => Promise<void>;
   logout: () => Promise<void>;
   completeOnboarding: (data: Partial<AppUser>) => Promise<void>;
   updateHealthInfo: (data: Partial<AppUser>) => Promise<void>;
@@ -130,27 +129,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Não distingue e-mail existente de inexistente: revelar isso deixaria
   // qualquer um descobrir quais e-mails têm conta. O Supabase já responde
   // igual nos dois casos; aqui só garantimos que a UI também responda igual.
-  // Sem redirectTo de propósito. A recuperação é por código de 6 dígitos, não
-  // por link: scanners de segurança (Gmail, antivírus) pré-visitam links de
-  // e-mail e consumiam o token de uso único antes do usuário clicar — os logs
-  // do Supabase mostravam "invalid or expired" segundos após o envio. Um código
-  // digitado não tem o que ser pré-visitado.
+  // Recuperação por LINK. Por código seria mais robusto (scanners de e-mail
+  // pré-visitam links e podem consumir o token de uso único), mas o template
+  // com {{ .Token }} exige SMTP customizado, que não está configurado — e o
+  // template padrão do Supabase só manda link.
   const sendPasswordReset = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: AUTH_CALLBACK_URL,
+    });
     // Limite de envio é a única falha que vale mostrar — o usuário precisa
     // saber que deve esperar, senão fica tentando de novo achando que quebrou.
     if (error && /rate|limit|seconds/i.test(error.message)) throw new Error(error.message);
-  }, []);
-
-  // Troca o código do e-mail por uma sessão de recuperação. Só depois dela o
-  // updateUser tem em quem aplicar a senha nova.
-  const verifyRecoveryCode = useCallback(async (email: string, codigo: string) => {
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: codigo.trim(),
-      type: 'recovery',
-    });
-    if (error) throw new Error(error.message);
   }, []);
 
   const updatePassword = useCallback(async (novaSenha: string) => {
@@ -204,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, appUser, loading, profileLoaded, signup, login, resendConfirmationEmail, logout, sendPasswordReset, verifyRecoveryCode, updatePassword, completeOnboarding, updateHealthInfo, refreshAppUser }}
+      value={{ session, appUser, loading, profileLoaded, signup, login, resendConfirmationEmail, logout, sendPasswordReset, updatePassword, completeOnboarding, updateHealthInfo, refreshAppUser }}
     >
       {children}
     </AuthContext.Provider>
