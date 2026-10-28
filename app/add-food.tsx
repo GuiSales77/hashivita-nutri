@@ -67,6 +67,17 @@ export default function AddFoodScreen() {
       <Text style={{ fontSize: 24, fontWeight: '600', color: colors.green900 }}>Adicionar alimento</Text>
 
       {!selectedFood && (
+        <Pressable onPress={() => router.replace('/add-food-ia')}>
+          <Card style={{ backgroundColor: colors.green100, borderWidth: 0, marginTop: 14, marginBottom: 2 }}>
+            <Text style={{ fontSize: 13.5, fontWeight: '700', color: colors.green900 }}>✍️  Escrever em vez de buscar</Text>
+            <Text style={{ fontSize: 12, color: colors.green900, marginTop: 2 }}>
+              "Duas colheres de arroz e um ovo frito" — a IA identifica os alimentos
+            </Text>
+          </Card>
+        </Pressable>
+      )}
+
+      {!selectedFood && (
         <>
           <View style={{ backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 12, marginTop: 16, marginBottom: 12 }}>
             <TextInput value={query} onChangeText={setQuery} placeholder="🔍  Buscar alimento..." style={{ fontSize: 14 }} />
