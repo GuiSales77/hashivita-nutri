@@ -99,20 +99,29 @@ QR code/APK — a distribuição passa pela App Store (ou TestFlight para testes
 ## Estrutura do projeto
 
 ```
-app/                     → rotas (Expo Router, file-based)
-  _layout.tsx             → layout raiz, providers
+app/                      → rotas (Expo Router, file-based)
+  _layout.tsx              → layout raiz, providers
   index.tsx                → decide pra onde redirecionar (login/onboarding/tabs)
-  (auth)/                  → login, cadastro, confirmação de e-mail
+  (auth)/                  → login, cadastro, confirmação de e-mail, recuperação de senha
+  auth-callback.tsx        → recebe o link de confirmação/redefinição
   onboarding.tsx
   (tabs)/                  → Início (Home) e Perfil
-  add-food.tsx              → modal de adicionar alimento
+  add-food.tsx             → modal de adicionar alimento (busca na base)
+  add-food-ia.tsx          → modal de adicionar escrevendo em texto livre (Gemini)
+  edit-health-info.tsx     → edição dos dados de saúde do onboarding
+  historico.tsx            → histórico diário (30 dias, nutrientes somados por dia)
 
 src/
-  theme/        → design tokens, metas nutricionais, comorbidades
-  context/      → AuthContext (sessão Supabase, onboarding)
-  services/     → supabaseClient, secureStoreAdapter
-  db/repositories/ → foodRepositorySupabase, mealRepositorySupabase
+  theme/        → design tokens, tipos de refeição, lista de nutrientes
+  domain/       → metasNutricionais (metas por perfil, limites, barras)
+  context/      → AuthContext (sessão Supabase, onboarding, dados de saúde)
+  services/     → supabaseClient, secureStoreAdapter, passwordPolicy
+  db/repositories/ → foodRepositorySupabase, mealRepositorySupabase, aiMealRepositorySupabase
   components/   → Card, PrimaryButton, Chip, NutrientBar etc.
+
+supabase/
+  *.sql                    → schema, policies e seeds, na ordem de aplicação
+  functions/interpretar-refeicao/ → Edge Function que fala com o Gemini
 ```
 
 ## Segurança
@@ -123,13 +132,31 @@ src/
   não consegue ler/editar dados de outro mesmo manipulando o app.
 - A `publishable key` no `.env` é segura de expor (foi feita para isso); a
   `service_role key` nunca deve entrar neste projeto.
+- A chave da API do Gemini **não fica no app nem no repositório**. Ela vive no Vault
+  do Supabase e é lida só de dentro da Edge Function, por uma função
+  `SECURITY DEFINER` cujo `execute` só o `service_role` tem. O app chama a Edge
+  Function com o JWT de quem está logado; anônimo recebe 401.
+- O bucket `avatars` é público para leitura por URL, mas **não é listável**: cada
+  pessoa só enxerga o próprio arquivo. Uma policy anterior dava SELECT do bucket
+  inteiro ao role `public`, o que permitia listar os uid e as fotos de todos os
+  usuários com a chave publishable. Foi corrigido — ver `supabase/03_avatars.sql`.
+- Ponto em aberto, só resolvível no painel: **Leaked Password Protection** (Auth →
+  Policies) está desligada. Ligar faz o Supabase recusar senhas que já vazaram.
 
 ## Limitações conhecidas (honestas, não escondidas)
 
-- A base de alimentos (`food`) precisa ser populada — o schema está pronto, mas os
-  dados em si (nomes, categorias, valores por 100g) ainda não foram inseridos em massa.
-- Selênio, iodo e vitamina D **não são colunas oficiais da Tabela TACO** — valores para
-  esses três nutrientes, quando inseridos, devem vir de fontes complementares (USDA,
-  literatura científica), não da TACO propriamente dita.
-- `eas.json` está configurado, mas `eas build:configure` ainda não foi rodado (precisa
-  da sua conta EAS logada, que não está disponível neste ambiente de desenvolvimento).
+- A base de alimentos tem 175 itens. É suficiente para o uso real do app, mas não
+  cobre a TACO inteira — alimento que não está na base não pode ser registrado, e a
+  entrada por texto livre também só consegue casar com o que existe no catálogo.
+- Selênio, iodo e vitamina D **não são colunas oficiais da Tabela TACO** — os valores
+  desses três vieram de fontes complementares (USDA, literatura), não da TACO.
+- A base tem nove colunas de nutrientes, e **a única vitamina entre elas é a D**. B12,
+  folato, C, A, E e K não estão nos dados; o histórico diário diz isso na tela em vez
+  de mostrar zeros que pareceriam medição.
+- As metas do MSD/IOM cobrem cinco dos nove nutrientes. Energia, proteína, carboidrato
+  e sódio aparecem como total, sem alvo — sódio ganha teto apenas para quem marcou
+  pressão alta no onboarding.
+- O app não funciona offline: toda leitura e escrita vai ao Supabase. Sem rede, as
+  telas mostram o estado vazio em vez de travar, mas não há fila de sincronização.
+- Nada aqui é orientação médica. O app soma o que foi registrado e compara com
+  tabelas de referência públicas; decisão de tratamento é de quem acompanha a pessoa.
