@@ -96,6 +96,32 @@ eas build --profile production --platform ios
 Diferente do Android, o resultado do build iOS não é instalável direto por
 QR code/APK — a distribuição passa pela App Store (ou TestFlight para testes).
 
+## Instalar o APK no Android (e o que fazer quando falha)
+
+Cada push na `main` dispara o GitHub Actions, que builda o APK no EAS, confere o
+arquivo e publica em **Releases**. O corpo de cada Release traz tamanho,
+SHA-256 e arquiteturas do arquivo publicado.
+
+Quando o celular diz que não instalou, a ordem útil de verificação é:
+
+1. **Desinstale a versão anterior e instale de novo.** Resolve os dois casos
+   mais comuns: instalação existente assinada com outra chave, e `versionCode`
+   igual ao que já está no aparelho (vários instaladores recusam a troca).
+2. **Compare o tamanho** do arquivo baixado com o que o Release informa. Menor
+   significa download interrompido — o instalador reclama de "pacote
+   inválido", não de download.
+3. **Confira a versão do Android.** O app pede 7.0 ou mais novo (minSdk 24).
+4. A mensagem exata importa: "aplicativo não instalado" (conflito de pacote),
+   "problema ao analisar o pacote" (arquivo corrompido) e "app não compatível"
+   (Android antigo ou arquitetura) têm causas diferentes.
+
+Para inspecionar um APK sem Android SDK, o que vale olhar é: zip íntegro,
+presenção do bloco `APK Sig Block 42`, certificado (tem que ser o mesmo entre
+builds), `versionCode`, `minSdkVersion` e as pastas em `lib/`. Foi assim que o
+`versionCode` travado em 2 apareceu — ele estava igual em quatro Releases
+seguidos porque `autoIncrement` existia só no perfil `production`, e o CI
+builda o `preview`.
+
 ## Estrutura do projeto
 
 ```
