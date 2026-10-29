@@ -1,6 +1,6 @@
 # supabase/
 
-Banco do HashiVita Nutri. Projeto: **HashiVita** (`fzhzdwwaartjulmqysrs`, `sa-east-1`).
+Banco do HashVita Nutri. Projeto: **HashVita** (`fzhzdwwaartjulmqysrs`, `sa-east-1`).
 
 | Arquivo | O que faz |
 | --- | --- |

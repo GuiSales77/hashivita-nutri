@@ -1,4 +1,4 @@
-# HashiVita Nutri
+# HashVita Nutri
 
 App mobile de registro alimentar com feedback nutricional para pessoas com
 tireoidite de Hashimoto — cálculo por regra de três sobre a Tabela TACO,

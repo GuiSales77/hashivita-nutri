@@ -1,5 +1,5 @@
 -- =============================================================================
--- HashiVita Nutri — schema Supabase
+-- HashVita Nutri — schema Supabase
 -- Registro alimentar com feedback nutricional para tireoidite de Hashimoto.
 --
 -- Uso pessoal: um usuario por conta. Sem hierarquia de papeis, sem organizacao,

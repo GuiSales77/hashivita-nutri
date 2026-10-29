@@ -1,5 +1,5 @@
 -- =============================================================================
--- HashiVita Nutri — tipo de refeição em meal_log
+-- HashVita Nutri — tipo de refeição em meal_log
 --
 -- ⚠️ NÃO APLICADO. Rode você no SQL Editor do painel:
 --    https://supabase.com/dashboard/project/fzhzdwwaartjulmqysrs/sql

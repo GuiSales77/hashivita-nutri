@@ -1,5 +1,5 @@
 -- =============================================================================
--- HashiVita Nutri — seed da tabela food (36 itens), valores por 100 g.
+-- HashVita Nutri — seed da tabela food (36 itens), valores por 100 g.
 --
 -- Fonte primaria: TACO/UNICAMP 4a ed. (energia, proteina, carboidrato, sodio,
 -- ferro, zinco). A TACO NAO traz selenio, iodo nem vitamina D — esses tres vem

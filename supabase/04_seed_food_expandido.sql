@@ -1,5 +1,5 @@
 -- =============================================================================
--- HashiVita Nutri — ampliação da base de alimentos
+-- HashVita Nutri — ampliação da base de alimentos
 --
 -- ⚠️ NÃO APLICADO. Rode você no SQL Editor do painel:
 --    https://supabase.com/dashboard/project/fzhzdwwaartjulmqysrs/sql

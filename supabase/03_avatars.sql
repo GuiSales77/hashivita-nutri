@@ -1,5 +1,5 @@
 -- =============================================================================
--- HashiVita Nutri — foto de perfil (avatar)
+-- HashVita Nutri — foto de perfil (avatar)
 --
 -- Já aplicado no projeto (migration `avatar_url_and_avatars_bucket`).
 -- Idempotente: pode rodar de novo no SQL Editor sem duplicar nada.

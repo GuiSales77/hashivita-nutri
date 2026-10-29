@@ -76,7 +76,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: "HashiVita Nutri — build ${{ github.run_number }}"
+          name: "HashVita Nutri — build ${{ github.run_number }}"
           files: ./hashivita-nutri.apk
           body: |
             Build automático gerado a partir do commit ${{ github.sha }}.

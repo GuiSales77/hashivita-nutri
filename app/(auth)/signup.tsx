@@ -46,7 +46,7 @@ export default function SignupScreen() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.paper }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: spacing.xl, paddingTop: insets.top + spacing.xl }}>
         <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 8 }}>🌱</Text>
-        <Text style={{ fontSize: 24, fontWeight: '600', color: colors.green900, textAlign: 'center' }}>HashiVita Nutri</Text>
+        <Text style={{ fontSize: 24, fontWeight: '600', color: colors.green900, textAlign: 'center' }}>HashVita Nutri</Text>
         <Text style={{ fontSize: 13, color: colors.ink500, textAlign: 'center', marginTop: 4, marginBottom: 24 }}>
           Crie sua conta para começar
         </Text>
