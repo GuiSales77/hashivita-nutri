@@ -52,6 +52,27 @@ export function sugerirTipoRefeicao(agora: Date = new Date()): MealType {
   return 'ceia';
 }
 
+/**
+ * Todos os nutrientes que a tabela de alimentos realmente carrega, na ordem em
+ * que o histórico os mostra.
+ *
+ * São nove colunas, e entre as vitaminas existe apenas a D — a base de
+ * alimentos não traz B12, folato, C, A, E nem K. O histórico diz isso na tela
+ * em vez de deixar a pessoa supor que a lista é completa: inventar colunas
+ * daria somas que parecem exatas e não são.
+ */
+export const NUTRIENTES_DO_REGISTRO: { key: string; label: string; unidade: string; casas: number }[] = [
+  { key: 'energia_kcal', label: 'Energia', unidade: 'kcal', casas: 0 },
+  { key: 'proteina_g', label: 'Proteínas', unidade: 'g', casas: 1 },
+  { key: 'carboidrato_g', label: 'Carboidratos', unidade: 'g', casas: 1 },
+  { key: 'sodium_mg', label: 'Sódio', unidade: 'mg', casas: 0 },
+  { key: 'selenium_mcg', label: 'Selênio', unidade: 'mcg', casas: 1 },
+  { key: 'iodine_mcg', label: 'Iodo', unidade: 'mcg', casas: 1 },
+  { key: 'vitamin_d_mcg', label: 'Vitamina D', unidade: 'mcg', casas: 1 },
+  { key: 'zinc_mg', label: 'Zinco', unidade: 'mg', casas: 1 },
+  { key: 'iron_mg', label: 'Ferro', unidade: 'mg', casas: 1 },
+];
+
 export type NutrienteKey = 'selenium_mcg' | 'iodine_mcg' | 'vitamin_d_mcg' | 'zinc_mg' | 'iron_mg';
 
 export const NUTRIENTES_PRIORITARIOS: { key: NutrienteKey; label: string; unidade: string }[] = [

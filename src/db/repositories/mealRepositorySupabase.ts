@@ -1,6 +1,6 @@
 import { supabase } from '../../services/supabaseClient';
 import { Food } from './foodRepositorySupabase';
-import { MealType, TIPOS_REFEICAO } from '../../theme/theme';
+import { MealType, TIPOS_REFEICAO, NUTRIENTES_DO_REGISTRO } from '../../theme/theme';
 
 export type MealLog = {
   id: string;
@@ -92,7 +92,11 @@ export async function listTodayMealLogs(userId: string): Promise<MealLog[]> {
     console.warn('Erro ao listar refeições:', error.message);
     return [];
   }
-  return (data ?? []).map((row: any) => ({
+  return (data ?? []).map(paraMealLog);
+}
+
+function paraMealLog(row: any): MealLog {
+  return {
     id: row.id,
     foodId: row.food_id,
     foodName: row.food_name,
@@ -105,7 +109,7 @@ export async function listTodayMealLogs(userId: string): Promise<MealLog[]> {
     // Se o patch 05_meal_type.sql ainda não foi aplicado, a coluna não existe
     // e o app continua funcionando, tratando tudo como lanche.
     mealType: (row.meal_type ?? 'lanche') as MealType,
-  }));
+  };
 }
 
 export async function deleteMealLog(id: string): Promise<void> {
@@ -132,4 +136,113 @@ export function agruparPorTipoDeRefeicao(entries: MealLog[]): { key: MealType; l
     ...tipo,
     itens: entries.filter((e) => e.mealType === tipo.key),
   })).filter((grupo) => grupo.itens.length > 0);
+}
+
+// ------------------------------------------------------------------ Histórico
+
+export type GrupoDeRefeicao = { key: MealType; label: string; emoji: string; itens: MealLog[] };
+
+export type DiaDoHistorico = {
+  /** `AAAA-MM-DD` no fuso do aparelho — é a identidade do dia na lista. */
+  dia: string;
+  rotulo: string;
+  itens: MealLog[];
+  grupos: GrupoDeRefeicao[];
+  /** Soma de cada um dos nove nutrientes da base, no dia. */
+  totais: Record<string, number>;
+};
+
+/**
+ * A data do dia no fuso de quem usa o app, não em UTC.
+ *
+ * `logged_at` é gravado em UTC. Usar a data de UTC jogaria tudo que foi
+ * registrado depois das 21h no Brasil (UTC-3) para o dia seguinte — a ceia
+ * apareceria no dia errado. `getFullYear/getMonth/getDate` já devolvem o
+ * horário local, então a conversão acontece sozinha aqui.
+ */
+function chaveDoDia(iso: string): string {
+  const d = new Date(iso);
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
+function rotuloDoDia(iso: string): string {
+  const d = new Date(iso);
+  const hoje = chaveDoDia(new Date().toISOString());
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const chave = chaveDoDia(iso);
+  if (chave === hoje) return 'Hoje';
+  if (chave === chaveDoDia(ontem.toISOString())) return 'Ontem';
+  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+export function somarNutrientesDoDia(itens: MealLog[]): Record<string, number> {
+  const totais: Record<string, number> = {};
+  for (const nutriente of NUTRIENTES_DO_REGISTRO) {
+    totais[nutriente.key] = totalDiarioPorNutriente(itens, nutriente.key);
+  }
+  return totais;
+}
+
+/**
+ * Agrupa uma lista de registros por dia, do mais recente para o mais antigo, e
+ * dentro de cada dia por tipo de refeição.
+ *
+ * Função pura, separada da consulta, para poder ser testada sem banco.
+ */
+export function agruparPorDia(entries: MealLog[]): DiaDoHistorico[] {
+  const porDia = new Map<string, MealLog[]>();
+  for (const entry of entries) {
+    const chave = chaveDoDia(entry.loggedAt);
+    const lista = porDia.get(chave);
+    if (lista) lista.push(entry);
+    else porDia.set(chave, [entry]);
+  }
+
+  return [...porDia.entries()]
+    // Ordem decrescente por data: o dia de hoje é o que interessa primeiro.
+    .sort((a, b) => (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0))
+    .map(([dia, itens]) => {
+      // Dentro do dia, cronológico — a consulta pode vir em qualquer ordem.
+      const ordenados = [...itens].sort((a, b) => a.loggedAt.localeCompare(b.loggedAt));
+      return {
+        dia,
+        rotulo: rotuloDoDia(ordenados[0].loggedAt),
+        itens: ordenados,
+        grupos: agruparPorTipoDeRefeicao(ordenados),
+        totais: somarNutrientesDoDia(ordenados),
+      };
+    });
+}
+
+/**
+ * Histórico dos últimos `dias` dias (o dia de hoje conta como um deles).
+ *
+ * A janela começa à meia-noite local do primeiro dia, para que o recorte
+ * coincida com o que a pessoa chama de "últimos 30 dias" no calendário dela.
+ */
+export async function listarHistorico(userId: string, dias = 30): Promise<DiaDoHistorico[]> {
+  const inicio = new Date();
+  inicio.setDate(inicio.getDate() - (dias - 1));
+  inicio.setHours(0, 0, 0, 0);
+
+  try {
+    const { data, error } = await supabase
+      .from('meal_log')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('logged_at', inicio.toISOString())
+      .order('logged_at', { ascending: false });
+    if (error) {
+      console.warn('Erro ao carregar o histórico:', error.message);
+      return [];
+    }
+    return agruparPorDia((data ?? []).map(paraMealLog));
+  } catch (e) {
+    // Mesmo motivo do foodRepository: o supabase-js lança em falha de rede.
+    console.warn('Falha de rede ao carregar o histórico:', e);
+    return [];
+  }
 }

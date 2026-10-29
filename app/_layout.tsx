@@ -17,6 +17,7 @@ export default function RootLayout() {
           <Stack.Screen name="add-food" options={{ presentation: 'modal' }} />
           <Stack.Screen name="add-food-ia" options={{ presentation: 'modal' }} />
           <Stack.Screen name="edit-health-info" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="historico" />
         </Stack>
         <StatusBar style="dark" />
       </AuthProvider>

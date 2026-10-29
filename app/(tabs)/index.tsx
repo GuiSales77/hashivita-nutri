@@ -197,6 +197,14 @@ export default function HomeScreen() {
       ))}
 
       <Pressable
+        onPress={() => router.push('/historico')}
+        accessibilityRole="button"
+        style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, borderRadius: 14, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: spacing.lg }}
+      >
+        <Text style={{ color: colors.green700, fontSize: 13.5, fontWeight: '600' }}>📅  Ver histórico diário</Text>
+      </Pressable>
+
+      <Pressable
         onPress={() => router.push('/add-food')}
         style={{ backgroundColor: colors.green700, borderRadius: 14, height: 52, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginTop: 8 }}
       >
