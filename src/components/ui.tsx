@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, ActivityIndicator, ViewStyle, TextInput } from 'react-native';
 import { colors, radius, spacing } from '../theme/theme';
+import { estadoDaBarra } from '../domain/metasNutricionais';
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   return (
@@ -121,16 +122,51 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function NutrientBar({ label, pct, valueLabel, color }: { label: string; pct: number; valueLabel: string; color: string }) {
+export function NutrientBar({
+  label,
+  total,
+  meta,
+  limiteSuperior,
+  unidade,
+}: {
+  label: string;
+  total: number;
+  meta: number;
+  limiteSuperior?: number | null;
+  unidade: string;
+}) {
+  const barra = estadoDaBarra(total, meta, limiteSuperior ?? null);
+
+  // Três estados, três leituras. Antes "abaixo da meta" e "acima do limite"
+  // usavam a mesma cor âmbar, então 10% de selênio e 800% de selênio eram
+  // desenhados igual.
+  const corAteMeta = barra.estado === 'abaixo' ? colors.green300 : colors.green500;
+  const corExcesso = barra.estado === 'acima_do_limite' ? colors.amber500 : colors.green300;
+
   return (
     <Card>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.ink700 }}>{label}</Text>
-        <Text style={{ fontSize: 12, color: colors.ink500 }}>{valueLabel}</Text>
+        <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.ink700 }}>
+          {label}
+          {barra.estado === 'acima_do_limite' ? ' ⚠️' : ''}
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.ink500 }}>
+          {total.toFixed(1)} {unidade} · {barra.rotulo}
+        </Text>
       </View>
-      <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.green100 }}>
-        <View style={{ height: 8, borderRadius: 4, width: `${Math.min(pct, 1) * 100}%`, backgroundColor: color }} />
+
+      {/* A escala acompanha o total, então passar muito do limite enche a barra
+          de âmbar em vez de parar em 100% como antes. */}
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.green100, flexDirection: 'row', overflow: 'hidden' }}>
+        <View style={{ height: 8, width: `${barra.fracaoAteMeta * 100}%`, backgroundColor: corAteMeta }} />
+        <View style={{ height: 8, width: `${barra.fracaoExcesso * 100}%`, backgroundColor: corExcesso }} />
       </View>
+
+      {barra.estado === 'acima_do_limite' && (
+        <Text style={{ fontSize: 11.5, color: colors.amber500, fontWeight: '600', marginTop: 6 }}>
+          Acima do limite superior de referência. Vale conversar com quem acompanha você.
+        </Text>
+      )}
     </Card>
   );
 }

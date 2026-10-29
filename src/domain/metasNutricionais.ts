@@ -254,3 +254,47 @@ export function avisosDeMedicacao(
   }
   return avisos;
 }
+
+// ------------------------------------------------------------ Leitura da barra
+
+export type EstadoBarra = {
+  /** 'abaixo' ainda não chegou na meta; 'na_meta' chegou; 'acima_do_limite' passou do UL. */
+  estado: 'abaixo' | 'na_meta' | 'acima_do_limite';
+  /** Fração 0..1 da barra pintada até a meta. */
+  fracaoAteMeta: number;
+  /** Fração 0..1 do que passou da meta. Some com a de cima para a barra cheia. */
+  fracaoExcesso: number;
+  rotulo: string;
+};
+
+/**
+ * Traduz total/meta/limite no que a barra deve mostrar.
+ *
+ * Antes isto vivia dentro do JSX da Home e tinha dois problemas:
+ *
+ * 1. A cor âmbar marcava tanto "abaixo da meta" quanto "acima do limite
+ *    superior". Estar com 10% do selênio às 9h e estar com 800% dele eram
+ *    desenhados igual — e só o segundo caso é um problema.
+ * 2. A largura era `Math.min(pct, 1)`, então 440 mcg de selênio (acima do
+ *    limite de 400) desenhava a mesma barra cheia que 55 mcg. O único caso
+ *    que precisa saltar aos olhos era o invisível.
+ *
+ * Agora a escala cresce junto com o total, e o que passou da meta vira um
+ * segundo trecho — âmbar só quando ultrapassa o limite superior.
+ */
+export function estadoDaBarra(total: number, meta: number, limiteSuperior: number | null): EstadoBarra {
+  const seguro = Number.isFinite(total) && total > 0 ? total : 0;
+  const escala = Math.max(meta, seguro) || 1;
+  const ateMeta = Math.min(seguro, meta);
+  const excesso = Math.max(0, seguro - meta);
+
+  const acimaDoLimite = limiteSuperior != null && seguro > limiteSuperior;
+  const estado: EstadoBarra['estado'] = acimaDoLimite ? 'acima_do_limite' : seguro >= meta ? 'na_meta' : 'abaixo';
+
+  return {
+    estado,
+    fracaoAteMeta: ateMeta / escala,
+    fracaoExcesso: excesso / escala,
+    rotulo: acimaDoLimite && limiteSuperior != null ? `limite ${limiteSuperior}` : `meta ${meta}`,
+  };
+}

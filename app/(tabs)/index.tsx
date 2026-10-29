@@ -84,20 +84,16 @@ export default function HomeScreen() {
       <Text style={{ fontSize: 13, color: colors.ink500, marginBottom: 8, textTransform: 'capitalize' }}>{hoje}</Text>
 
       <SectionLabel>Seus nutrientes hoje</SectionLabel>
-      {metas.map((m) => {
-        const total = totalDiarioPorNutriente(entries, m.key);
-        const pct = total / m.meta;
-        const passouLimite = m.limiteSuperior ? total > m.limiteSuperior : false;
-        return (
-          <NutrientBar
-            key={m.key}
-            label={m.label}
-            pct={pct}
-            valueLabel={`${total.toFixed(1)}/${m.meta} ${m.unidade}${passouLimite ? ' ⚠️' : ''}`}
-            color={passouLimite ? colors.amber500 : pct >= 0.8 ? colors.green500 : colors.amber500}
-          />
-        );
-      })}
+      {metas.map((m) => (
+        <NutrientBar
+          key={m.key}
+          label={m.label}
+          total={totalDiarioPorNutriente(entries, m.key)}
+          meta={m.meta}
+          limiteSuperior={m.limiteSuperior}
+          unidade={m.unidade}
+        />
+      ))}
 
       {avisosMedicacao.length > 0 && (
         <>
@@ -142,9 +138,12 @@ export default function HomeScreen() {
               <NutrientBar
                 key={a.key}
                 label={a.titulo}
-                pct={total / a.meta}
-                valueLabel={`${total.toFixed(0)}/${a.meta} ${a.unidade}`}
-                color={total > a.meta ? colors.amber500 : colors.green500}
+                total={total}
+                meta={a.meta}
+                // O sódio da hipertensão é teto, não alvo: passar dele é o que
+                // importa, então a própria meta faz o papel de limite.
+                limiteSuperior={a.meta}
+                unidade={a.unidade}
               />
             );
           })}
