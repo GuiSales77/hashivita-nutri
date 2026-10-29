@@ -25,10 +25,10 @@ export default function AddFoodScreen() {
 
   useEffect(() => {
     setSearching(true);
-    searchFoods(query).then((data) => {
-      setResults(data);
-      setSearching(false);
-    });
+    searchFoods(query)
+      .then(setResults)
+      .catch(() => setResults([]))
+      .finally(() => setSearching(false));
   }, [query]);
 
   function handleSelectFood(food: Food) {

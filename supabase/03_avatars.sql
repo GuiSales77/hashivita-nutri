@@ -1,7 +1,8 @@
 -- =============================================================================
 -- HashVita Nutri — foto de perfil (avatar)
 --
--- Já aplicado no projeto (migration `avatar_url_and_avatars_bucket`).
+-- Já aplicado no projeto (migrations `avatar_url_and_avatars_bucket` e
+-- `avatars_select_own_only`).
 -- Idempotente: pode rodar de novo no SQL Editor sem duplicar nada.
 --   https://supabase.com/dashboard/project/fzhzdwwaartjulmqysrs/sql
 -- =============================================================================
@@ -27,10 +28,24 @@ on conflict (id) do update set public = true;
 --    uid — é isso que amarra a escrita ao dono. Caminho plano (sem pasta), por
 --    isso a checagem é no `name` inteiro e não em storage.foldername().
 -- -----------------------------------------------------------------------------
+-- ⚠️ A policy antiga `avatars_public_read` liberava SELECT do bucket INTEIRO
+-- para o role `public`. Isso habilitava o endpoint de listagem: qualquer pessoa
+-- com a chave publishable (que vai dentro do APK) conseguia LISTAR o bucket e
+-- obter o uid e a foto de todo mundo. Foi removida.
 drop policy if exists avatars_public_read on storage.objects;
-create policy avatars_public_read on storage.objects
-  for select
-  using (bucket_id = 'avatars');
+
+-- O SELECT voltou restrito ao próprio arquivo. É necessário porque o app envia a
+-- foto com upsert, e no Postgres `on conflict do update` exige poder LER a linha
+-- em conflito: sem nenhuma policy de SELECT, a troca de foto falha com
+-- "new row violates row-level security policy".
+-- Listar o bucket agora devolve só o arquivo de quem pediu.
+drop policy if exists avatars_select_own on storage.objects;
+create policy avatars_select_own on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'avatars'
+    and name = (select auth.uid())::text || '.png'
+  );
 
 drop policy if exists avatars_insert_own on storage.objects;
 create policy avatars_insert_own on storage.objects
@@ -65,7 +80,9 @@ create policy avatars_delete_own on storage.objects
 -- -----------------------------------------------------------------------------
 -- Nota sobre privacidade
 --
--- O bucket é PÚBLICO para leitura — quem tiver a URL vê a foto, sem login.
+-- O bucket é PÚBLICO para leitura — quem tiver a URL vê a foto, sem login. O que
+-- mudou é que não dá mais para DESCOBRIR as URLs: sem SELECT para o role
+-- `public`, a listagem do bucket volta vazia, e o nome do arquivo é um uuid.
 -- É o que o app espera (getPublicUrl). Se foto de perfil for tratada como dado
 -- sensível, a alternativa é bucket privado + createSignedUrl com validade curta,
 -- mas aí o `avatar_url` salvo expira e precisa ser regerado a cada leitura.

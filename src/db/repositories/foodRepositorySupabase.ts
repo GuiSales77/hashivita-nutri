@@ -33,19 +33,32 @@ export async function searchFoods(query: string): Promise<Food[]> {
   if (query.trim()) {
     request = request.ilike('name', `%${escaparCuringasLike(query.trim())}%`);
   }
-  const { data, error } = await request;
-  if (error) {
-    console.warn('Erro ao buscar alimentos:', error.message);
+  try {
+    const { data, error } = await request;
+    if (error) {
+      console.warn('Erro ao buscar alimentos:', error.message);
+      return [];
+    }
+    return data ?? [];
+  } catch (e) {
+    // O supabase-js LANÇA em falha de rede, não devolve `error`. Sem este
+    // catch a promessa rejeitava, o `.then` da tela não rodava e o indicador
+    // de "buscando" ficava girando para sempre.
+    console.warn('Falha de rede ao buscar alimentos:', e);
     return [];
   }
-  return data ?? [];
 }
 
 export async function getFoodById(id: string): Promise<Food | null> {
-  const { data, error } = await supabase.from('food').select('*').eq('id', id).maybeSingle();
-  if (error) {
-    console.warn('Erro ao buscar alimento:', error.message);
+  try {
+    const { data, error } = await supabase.from('food').select('*').eq('id', id).maybeSingle();
+    if (error) {
+      console.warn('Erro ao buscar alimento:', error.message);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.warn('Falha de rede ao buscar alimento:', e);
     return null;
   }
-  return data;
 }

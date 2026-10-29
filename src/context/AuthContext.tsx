@@ -83,6 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfileLoaded(true);
       }
       setLoading(false);
+    }).catch(() => {
+      // Sem este catch, uma falha ao ler a sessão (rede, SecureStore) deixava
+      // `loading` em true para sempre e o app não passava do spinner inicial.
+      setSession(null);
+      setProfileLoaded(true);
+      setLoading(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -123,7 +129,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
-    await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: AUTH_CALLBACK_URL } });
+    // O erro precisa subir: a tela já tinha um catch, mas ele nunca disparava,
+    // então bater no limite de envio mostrava "E-mail reenviado" e a pessoa
+    // esperava por uma mensagem que nunca ia chegar.
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: AUTH_CALLBACK_URL },
+    });
+    if (error) throw new Error(error.message);
   }, []);
 
   // Não distingue e-mail existente de inexistente: revelar isso deixaria
@@ -148,7 +162,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Offline ou servidor fora do ar: o signOut rejeita e, antes disto, a
+      // exceção subia até o handleLogout e impedia o router.replace — o usuário
+      // ficava parado na tela de Perfil, aparentemente ainda logado.
+    }
+    // A sessão local cai de qualquer jeito. Sem isto, falha de rede deixaria a
+    // pessoa presa numa conta da qual ela pediu para sair.
+    setSession(null);
+    setAppUser(null);
+    setProfileLoaded(true);
   }, []);
 
   // Onboarding e edição no Perfil gravam nas mesmas colunas; só o onboarding
