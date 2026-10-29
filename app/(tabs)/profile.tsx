@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, COMORBIDADES } from '../../src/theme/theme';
 import { Card, SectionLabel } from '../../src/components/ui';
 import { useAuth } from '../../src/context/AuthContext';
+import { metasPara, FONTE_CURTA } from '../../src/domain/metasNutricionais';
 import { uploadAvatar } from '../../src/db/repositories/avatarRepositorySupabase';
 
 export default function ProfileScreen() {
@@ -14,6 +15,15 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const [uploading, setUploading] = useState(false);
   if (!appUser) return null;
+
+  const metas = metasPara({
+    sex: appUser.sex,
+    age: appUser.age,
+    ageRange: appUser.ageRange,
+    hasHashimoto: appUser.hasHashimoto,
+    hashimotoMedicationTime: appUser.hashimotoMedicationTime,
+    healthConditions: appUser.healthConditions,
+  });
 
   const labelsComorbidades = appUser.healthConditions
     .map((key) => COMORBIDADES.find((c) => c.key === key)?.label ?? key)
@@ -129,6 +139,38 @@ export default function ProfileScreen() {
         <Row label="Medicação Hashimoto" value={appUser.hasHashimoto ? `Sim, às ${appUser.hashimotoMedicationTime}` : 'Não'} />
         <Row label="Outras condições" value={labelsComorbidades || 'Nenhuma'} last />
       </Card>
+
+      {/* Mostrar a origem de cada número importa: são referências populacionais,
+          não uma prescrição feita para esta pessoa. */}
+      <SectionLabel>Suas metas diárias</SectionLabel>
+      <Card>
+        {metas.map((m, i) => (
+          <View
+            key={m.key}
+            style={{
+              paddingVertical: 10,
+              borderBottomWidth: i === metas.length - 1 ? 0 : 1,
+              borderBottomColor: colors.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, color: colors.ink700, fontWeight: '600' }}>{m.label}</Text>
+              <Text style={{ fontSize: 14, color: colors.green900, fontWeight: '700' }}>
+                {m.meta} {m.unidade}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 11, color: colors.ink500, marginTop: 2 }}>
+              {m.base}
+              {m.limiteSuperior ? `  ·  limite ${m.limiteSuperior} ${m.unidade}` : ''}
+            </Text>
+          </View>
+        ))}
+      </Card>
+      <Text style={{ fontSize: 11, color: colors.ink500, lineHeight: 16, marginBottom: spacing.md }}>
+        Valores de referência do {FONTE_CURTA}, escolhidos pelo seu sexo e pela sua idade. Cobrem a
+        necessidade de 97 a 98% das pessoas saudáveis — são referência populacional, não prescrição.
+        Quem ajusta isso para você é o profissional que acompanha seu tratamento.
+      </Text>
 
       <Pressable onPress={handleLogout}>
         <Card>

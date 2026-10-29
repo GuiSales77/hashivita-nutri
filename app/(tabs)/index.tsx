@@ -2,7 +2,8 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, NUTRIENTES_PRIORITARIOS, METAS_PADRAO, LIMITES_SUPERIORES, META_SODIO_HIPERTENSAO_MG } from '../../src/theme/theme';
+import { colors, spacing } from '../../src/theme/theme';
+import { metasPara, acompanhamentosPara, avisosDeMedicacao } from '../../src/domain/metasNutricionais';
 import { Card, NutrientBar, SectionLabel } from '../../src/components/ui';
 import { useAuth } from '../../src/context/AuthContext';
 import { listTodayMealLogs, totalDiarioPorNutriente, deleteMealLog, agruparPorTipoDeRefeicao, MealLog } from '../../src/db/repositories/mealRepositorySupabase';
@@ -31,9 +32,21 @@ export default function HomeScreen() {
 
   const primeiroNome = appUser?.fullName?.split(' ')[0] ?? '';
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  const temPressaoAlta = appUser?.healthConditions.includes('pressao_alta');
-  const temDiabetes = appUser?.healthConditions.some((c) => c.startsWith('diabetes'));
   const grupos = agruparPorTipoDeRefeicao(entries);
+
+  // Metas vindas das tabelas do MSD, escolhidas pelo sexo e pela idade do perfil
+  // — antes o app usava um valor único para todo mundo.
+  const perfil = {
+    sex: appUser?.sex ?? null,
+    age: appUser?.age ?? null,
+    ageRange: appUser?.ageRange ?? null,
+    hasHashimoto: appUser?.hasHashimoto ?? false,
+    hashimotoMedicationTime: appUser?.hashimotoMedicationTime ?? null,
+    healthConditions: appUser?.healthConditions ?? [],
+  };
+  const metas = metasPara(perfil);
+  const acompanhamentos = acompanhamentosPara(perfil);
+  const avisosMedicacao = avisosDeMedicacao(perfil, entries);
 
   // Confirmação sempre: os cartões ficam próximos e a exclusão não tem volta.
   function handleRemove(entry: MealLog) {
@@ -71,42 +84,70 @@ export default function HomeScreen() {
       <Text style={{ fontSize: 13, color: colors.ink500, marginBottom: 8, textTransform: 'capitalize' }}>{hoje}</Text>
 
       <SectionLabel>Seus nutrientes hoje</SectionLabel>
-      {NUTRIENTES_PRIORITARIOS.map((n) => {
-        const total = totalDiarioPorNutriente(entries, n.key);
-        const meta = METAS_PADRAO[n.key];
-        const limite = LIMITES_SUPERIORES[n.key as keyof typeof LIMITES_SUPERIORES];
-        const pct = total / meta;
-        const passouLimite = limite ? total > limite : false;
+      {metas.map((m) => {
+        const total = totalDiarioPorNutriente(entries, m.key);
+        const pct = total / m.meta;
+        const passouLimite = m.limiteSuperior ? total > m.limiteSuperior : false;
         return (
           <NutrientBar
-            key={n.key}
-            label={n.label}
+            key={m.key}
+            label={m.label}
             pct={pct}
-            valueLabel={`${total.toFixed(1)}/${meta} ${n.unidade}${passouLimite ? ' ⚠️' : ''}`}
+            valueLabel={`${total.toFixed(1)}/${m.meta} ${m.unidade}${passouLimite ? ' ⚠️' : ''}`}
             color={passouLimite ? colors.amber500 : pct >= 0.8 ? colors.green500 : colors.amber500}
           />
         );
       })}
 
-      {(temPressaoAlta || temDiabetes) && (
+      {avisosMedicacao.length > 0 && (
+        <>
+          <SectionLabel>Perto do horário da sua medicação</SectionLabel>
+          <Card style={{ backgroundColor: colors.amberBg, borderColor: colors.amber500 }}>
+            <Text style={{ fontSize: 13, color: colors.ink700, lineHeight: 19 }}>
+              O Manual MSD lista <Text style={{ fontWeight: '700' }}>cálcio, ferro e magnésio</Text> entre as
+              substâncias que diminuem a absorção da levotiroxina. Estes registros ficaram perto das{' '}
+              {appUser?.hashimotoMedicationTime}:
+            </Text>
+            {avisosMedicacao.map((aviso, i) => (
+              <Text key={i} style={{ fontSize: 12.5, color: colors.ink700, marginTop: 6 }}>
+                • {aviso.foodName} — {aviso.motivo}
+              </Text>
+            ))}
+            <Text style={{ fontSize: 11.5, color: colors.ink500, marginTop: 8, lineHeight: 16 }}>
+              Espaçar o horário é algo a combinar com quem acompanha seu tratamento. Isto é um lembrete, não
+              uma orientação médica.
+            </Text>
+          </Card>
+        </>
+      )}
+
+      {acompanhamentos.length > 0 && (
         <>
           <SectionLabel>Acompanhamento extra (pelo seu perfil)</SectionLabel>
-          {temPressaoAlta && (
-            <NutrientBar
-              label="Sódio"
-              pct={totalDiarioPorNutriente(entries, 'sodium_mg') / META_SODIO_HIPERTENSAO_MG}
-              valueLabel={`${totalDiarioPorNutriente(entries, 'sodium_mg').toFixed(0)}/${META_SODIO_HIPERTENSAO_MG} mg`}
-              color={totalDiarioPorNutriente(entries, 'sodium_mg') > META_SODIO_HIPERTENSAO_MG ? colors.amber500 : colors.green500}
-            />
-          )}
-          {temDiabetes && (
-            <Card>
-              <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.ink700 }}>Carboidratos hoje</Text>
-              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.green900, marginTop: 4 }}>
-                {totalDiarioPorNutriente(entries, 'carboidrato_g').toFixed(1)}g
-              </Text>
-            </Card>
-          )}
+          {acompanhamentos.map((a) => {
+            const total = totalDiarioPorNutriente(entries, a.key === 'sodio' ? 'sodium_mg' : 'carboidrato_g');
+            if (a.meta == null) {
+              // Sem meta de referência: mostra o total, sem fingir que existe um alvo.
+              return (
+                <Card key={a.key}>
+                  <Text style={{ fontSize: 13.5, fontWeight: '600', color: colors.ink700 }}>{a.titulo}</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: colors.green900, marginTop: 4 }}>
+                    {total.toFixed(1)}{a.unidade}
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: colors.ink500, marginTop: 4 }}>{a.motivo}</Text>
+                </Card>
+              );
+            }
+            return (
+              <NutrientBar
+                key={a.key}
+                label={a.titulo}
+                pct={total / a.meta}
+                valueLabel={`${total.toFixed(0)}/${a.meta} ${a.unidade}`}
+                color={total > a.meta ? colors.amber500 : colors.green500}
+              />
+            );
+          })}
         </>
       )}
 

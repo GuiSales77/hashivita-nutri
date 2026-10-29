@@ -24,25 +24,11 @@ export const COMORBIDADES = [
   { key: 'pressao_baixa', label: 'Pressão baixa' },
 ] as const;
 
-// Metas diárias de referência — ver docs/03-Calculo-Nutricional.md para fontes
-// (IDR ANVISA RDC 269/2005, ajustado pela pesquisa específica de Hashimoto).
-export const METAS_PADRAO = {
-  selenium_mcg: 55,
-  iodine_mcg: 150,
-  vitamin_d_mcg: 15,
-  zinc_mg: 9,
-  iron_mg: 14,
-};
-
-export const LIMITES_SUPERIORES = {
-  selenium_mcg: 400,
-  iodine_mcg: 1100,
-  vitamin_d_mcg: 100,
-  zinc_mg: 40,
-  iron_mg: 45,
-};
-
-export const META_SODIO_HIPERTENSAO_MG = 2000;
+// As metas diárias vivem em src/domain/metasNutricionais.ts, porque dependem do
+// sexo e da idade da pessoa. Antes havia aqui um bloco METAS_PADRAO com um valor
+// único para todo mundo (ferro 14 mg, zinco 9 mg) — errado para a maioria dos
+// perfis e sem fonte verificável. Foi removido de propósito: deixar os números
+// antigos no projeto era convite para alguém reusá-los.
 
 export type MealType = 'cafe_da_manha' | 'almoco' | 'lanche' | 'jantar' | 'ceia';
 
