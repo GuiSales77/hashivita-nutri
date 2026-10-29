@@ -41,24 +41,45 @@ export async function searchFoods(query: string): Promise<Food[]> {
     }
     return data ?? [];
   } catch (e) {
-    // O supabase-js LANÇA em falha de rede, não devolve `error`. Sem este
-    // catch a promessa rejeitava, o `.then` da tela não rodava e o indicador
-    // de "buscando" ficava girando para sempre.
-    console.warn('Falha de rede ao buscar alimentos:', e);
+    // Rede fora cai no `if (error)` acima, não aqui: o postgrest-js embrulha a
+    // rejeição do fetch num `{ error }` (ver `res.catch((fetchError) => ...)`
+    // em postgrest-js). Este catch é só rede de segurança para um lançamento
+    // inesperado — não existe defeito conhecido que passe por ele.
+    console.warn('Falha inesperada ao buscar alimentos:', e);
     return [];
   }
 }
 
+/**
+ * `null` aqui significa uma coisa só: o alimento não existe no catálogo.
+ *
+ * Qualquer falha de leitura LANÇA, ao contrário de `searchFoods`, que devolve
+ * lista vazia. A diferença é proposital: na busca, lista vazia é um estado de
+ * tela legítimo; aqui, quem chama usa o resultado para dizer à pessoa por que o
+ * registro não foi salvo, e "não encontrado no banco" seria mentira quando o
+ * que caiu foi a conexão.
+ */
 export async function getFoodById(id: string): Promise<Food | null> {
+  let resposta;
   try {
-    const { data, error } = await supabase.from('food').select('*').eq('id', id).maybeSingle();
-    if (error) {
-      console.warn('Erro ao buscar alimento:', error.message);
-      return null;
-    }
-    return data;
+    resposta = await supabase.from('food').select('*').eq('id', id).maybeSingle();
   } catch (e) {
-    console.warn('Falha de rede ao buscar alimento:', e);
-    return null;
+    // Mesmo caso do searchFoods: o caminho real da queda de rede é o
+    // `resposta.error` logo abaixo. Isto cobre o lançamento inesperado.
+    console.warn('Falha inesperada ao buscar alimento:', e);
+    throw new Error('sem conexão com o servidor');
   }
+  if (resposta.error) throw new Error(mensagemDeLeitura(resposta.error.message));
+  return resposta.data;
+}
+
+/**
+ * O postgrest-js entrega a queda de rede como `"TypeError: fetch failed"`, que
+ * é o que apareceria na tela de confirmação da IA se fosse repassado cru.
+ */
+function mensagemDeLeitura(mensagem: string): string {
+  if (/fetch failed|network|timeout|ENOTFOUND|ECONNREFUSED/i.test(mensagem)) {
+    return 'sem conexão com o servidor';
+  }
+  return mensagem;
 }

@@ -72,6 +72,39 @@ jobs:
       - name: Baixar o APK gerado
         run: curl -fL --retry 3 -o hashivita-nutri.apk "${{ steps.build.outputs.url }}"
 
+      - name: Conferir o APK antes de publicar
+        id: apk
+        # Um download truncado aqui viraria um Release que NENHUM celular
+        # instala ("problema ao analisar o pacote"). Melhor falhar o workflow
+        # do que publicar um arquivo quebrado. O resumo também vai para o
+        # corpo do Release, para dar como conferir o arquivo baixado.
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import hashlib, os, re, struct, sys, zipfile
+          caminho = 'hashivita-nutri.apk'
+          tamanho = os.path.getsize(caminho)
+          dados = open(caminho, 'rb').read()
+          try:
+              z = zipfile.ZipFile(caminho)
+              if z.testzip() is not None:
+                  raise zipfile.BadZipFile('entrada com CRC invalido')
+              nomes = z.namelist()
+          except zipfile.BadZipFile as e:
+              print(f'::error::APK corrompido ou incompleto ({tamanho} bytes): {e}', file=sys.stderr)
+              raise SystemExit(1)
+          if 'AndroidManifest.xml' not in nomes:
+              print('::error::APK sem AndroidManifest.xml', file=sys.stderr)
+              raise SystemExit(1)
+          if b'APK Sig Block 42' not in dados[-4_000_000:]:
+              print('::error::APK sem bloco de assinatura', file=sys.stderr)
+              raise SystemExit(1)
+          abis = sorted({n.split('/')[1] for n in nomes if n.startswith('lib/')})
+          print(f'tamanho={tamanho}')
+          print(f'mb={tamanho / 1048576:.2f}')
+          print(f'sha256={hashlib.sha256(dados).hexdigest()}')
+          print(f'abis={",".join(abis)}')
+          EOF
+
       - name: Publicar como GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -81,5 +114,18 @@ jobs:
           body: |
             Build automático gerado a partir do commit ${{ github.sha }}.
 
-            Baixe o `.apk` abaixo e instale no Android (ative "instalar de
-            fontes desconhecidas" se o sistema pedir).
+            **Arquivo conferido antes de publicar**
+            - Tamanho: `${{ steps.apk.outputs.mb }} MB` (`${{ steps.apk.outputs.tamanho }}` bytes)
+            - SHA-256: `${{ steps.apk.outputs.sha256 }}`
+            - Arquiteturas: `${{ steps.apk.outputs.abis }}`
+            - Android 7.0 ou mais novo (minSdk 24)
+
+            **Como instalar**
+            1. Baixe o `.apk` abaixo e confira se o tamanho baixado é o de cima.
+               Se for menor, o download parou no meio — baixe de novo.
+            2. Ative "instalar de fontes desconhecidas" para o app que abriu o
+               arquivo (navegador ou gerenciador de arquivos), se o sistema pedir.
+            3. **Se der "aplicativo não instalado"**, desinstale a versão
+               anterior do HashVita antes de instalar esta. Android recusa a
+               troca quando a instalação existente veio de um build assinado com
+               outra chave.

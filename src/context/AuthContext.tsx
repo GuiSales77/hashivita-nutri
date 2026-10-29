@@ -26,6 +26,8 @@ type AuthContextValue = {
   appUser: AppUser | null;
   loading: boolean;
   profileLoaded: boolean;
+  /** Mensagem quando a leitura do perfil falhou (rede, por exemplo). */
+  profileError: string | null;
   signup: (data: { fullName: string; email: string; password: string }) => Promise<SignupResult>;
   login: (email: string, password: string) => Promise<LoginResult>;
   resendConfirmationEmail: (email: string) => Promise<void>;
@@ -47,14 +49,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // isso o app/index.tsx decidia a rota com appUser=null e mandava pro
   // onboarding quem já tinha se cadastrado.
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const loadAppUser = useCallback(async (userId: string) => {
-    const { data, error } = await supabase.from('app_user').select('*').eq('id', userId).maybeSingle();
-    if (error || !data) {
+    let resposta;
+    try {
+      resposta = await supabase.from('app_user').select('*').eq('id', userId).maybeSingle();
+    } catch (e) {
+      // Rede de segurança: o postgrest-js converte queda de rede em `error`, e
+      // é o `if (error)` abaixo que trata o caso real.
+      console.warn('Falha inesperada ao carregar o perfil:', e);
+      setProfileError('Não foi possível carregar seu perfil. Verifique sua conexão.');
+      setProfileLoaded(true);
+      return;
+    }
+
+    const { data, error } = resposta;
+    if (error) {
+      // AQUI está o defeito que isto conserta. Antes, erro de leitura caía no
+      // mesmo ramo de "linha não existe": zerava `appUser` e o app/index.tsx
+      // lia isso como "não fez onboarding" e mandava quem já tinha se
+      // cadastrado preencher o questionário de novo — por causa de uma queda
+      // de conexão. `appUser` agora fica como estava e a tela diz o que houve.
+      setProfileError(
+        /fetch failed|network|timeout/i.test(error.message)
+          ? 'Não foi possível falar com o servidor. Verifique sua conexão.'
+          : error.message
+      );
+      setProfileLoaded(true);
+      return;
+    }
+
+    setProfileError(null);
+    if (!data) {
+      // Resposta boa, linha inexistente: aí sim é perfil que não existe.
       setAppUser(null);
       setProfileLoaded(true);
       return;
     }
+
     setAppUser({
       id: data.id,
       email: data.email,
@@ -84,8 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setLoading(false);
     }).catch(() => {
-      // Sem este catch, uma falha ao ler a sessão (rede, SecureStore) deixava
-      // `loading` em true para sempre e o app não passava do spinner inicial.
+      // `getSession()` lê a sessão do SecureStore e não rejeita em queda de
+      // rede (conferido no auth-js). Mantido como garantia de que `loading`
+      // não fica preso em true se a leitura local falhar.
       setSession(null);
       setProfileLoaded(true);
       setLoading(false);
@@ -165,12 +199,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch {
-      // Offline ou servidor fora do ar: o signOut rejeita e, antes disto, a
-      // exceção subia até o handleLogout e impedia o router.replace — o usuário
-      // ficava parado na tela de Perfil, aparentemente ainda logado.
+      // O `signOut` do auth-js não rejeita em queda de rede: ele devolve
+      // `{ error }` e, mesmo assim, apaga a sessão local antes de devolver
+      // (`removeCurrentSession()` roda nos dois caminhos). O catch é garantia.
     }
-    // A sessão local cai de qualquer jeito. Sem isto, falha de rede deixaria a
-    // pessoa presa numa conta da qual ela pediu para sair.
+    // Limpar o estado aqui faz a saída não depender do evento SIGNED_OUT
+    // chegar: quem pediu para sair sai, qualquer que seja a resposta do
+    // servidor.
     setSession(null);
     setAppUser(null);
     setProfileLoaded(true);
@@ -218,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, appUser, loading, profileLoaded, signup, login, resendConfirmationEmail, logout, sendPasswordReset, updatePassword, completeOnboarding, updateHealthInfo, refreshAppUser }}
+      value={{ session, appUser, loading, profileLoaded, profileError, signup, login, resendConfirmationEmail, logout, sendPasswordReset, updatePassword, completeOnboarding, updateHealthInfo, refreshAppUser }}
     >
       {children}
     </AuthContext.Provider>

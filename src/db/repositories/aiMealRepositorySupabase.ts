@@ -71,12 +71,14 @@ export async function registrarItensInterpretados(
   let registrados = 0;
 
   for (const item of itens) {
-    const food = await getFoodById(item.food_id);
-    if (!food) {
-      falhas.push(`${item.food_name} (não encontrado no banco)`);
-      continue;
-    }
     try {
+      const food = await getFoodById(item.food_id);
+      if (food == null) {
+        // Aqui `null` é ausência de verdade: o id veio da IA e o alimento pode
+        // ter sido removido do catálogo entre a interpretação e a confirmação.
+        falhas.push(`${item.food_name} (não encontrado no banco)`);
+        continue;
+      }
       await createMealLog(userId, food, undefined, `${item.grams}g`, item.grams, item.meal_type);
       registrados++;
     } catch (e: any) {
